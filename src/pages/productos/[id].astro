@@ -1,0 +1,13 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Catalog from '../../components/catalog/Catalog';
+import { getCatalog } from '../../lib/server/products';
+import { isLocal } from '../../lib/server/config';
+const catalog = await getCatalog(Astro);
+const product = catalog.products.find(item => item.id === Astro.params.id);
+if (!product) Astro.response.status = 404;
+Astro.response.headers.set('Cache-Control', 'no-store');
+---
+<Layout title={product ? `${product.name} — Villanueva` : 'Producto no encontrado — Villanueva'}>
+  {product ? <Catalog client:load initialProducts={catalog.products} initialCurrency={catalog.currency} demo={isLocal()} initialProductId={product.id}/> : <main id="contenido" class="setup-state"><h1>Producto no encontrado</h1><a href="/" class="secondary">Volver al catálogo</a></main>}
+</Layout>

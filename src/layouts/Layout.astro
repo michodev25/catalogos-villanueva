@@ -1,0 +1,19 @@
+---
+import '@fontsource-variable/manrope';
+import '../styles/global.css';
+interface Props { title?: string; privatePage?: boolean }
+const { title = 'Villanueva — Energía e iluminación', privatePage = false } = Astro.props;
+---
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="Descubre paneles, tiras LED RGB y lámparas solares en Villanueva. Prepara tu selección y cotiza por WhatsApp." />
+    <meta name="theme-color" content="#173e2c" />
+    {privatePage && <meta name="robots" content="noindex,nofollow" />}
+    <title>{title}</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  </head>
+  <body><a class="skip-link" href="#contenido">Ir al contenido</a><slot /></body>
+</html>

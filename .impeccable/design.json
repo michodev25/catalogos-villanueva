@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-11T21:40:10.400Z",
+  "title": "Design System: Catálogos Villanueva",
+  "extensions": {
+    "shadows": [
+      {
+        "name": "dialog",
+        "value": "0 16px 60px #173e2c24",
+        "purpose": "Separar el carrito y la ficha del catálogo."
+      }
+    ],
+    "motion": [
+      {
+        "name": "product-image",
+        "value": "transform 0.35s cubic-bezier(.2,.8,.2,1)",
+        "purpose": "Respuesta al pasar sobre una foto, desactivada con movimiento reducido."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "mobile",
+        "value": "560px"
+      },
+      {
+        "name": "tablet",
+        "value": "800px"
+      },
+      {
+        "name": "compact-desktop",
+        "value": "1100px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Acción principal",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Acción de guardar o cotizar.",
+      "html": "<button class=\"ds-primary\">Guardar producto</button>",
+      "css": ".ds-primary{background:var(--ink,#173e2c);color:white;border:0;border-radius:8px;padding:12px 18px;min-height:46px;font:600 13px sans-serif}.ds-primary:hover{background:#24583b}.ds-primary:focus-visible{outline:3px solid #648c3f;outline-offset:4px}"
+    },
+    {
+      "name": "Acción secundaria",
+      "kind": "button",
+      "description": "Navegación secundaria.",
+      "html": "<button class=\"ds-secondary\">Volver</button>",
+      "css": ".ds-secondary{border:1px solid var(--line,#e0e6da);color:var(--ink,#173e2c);background:white;border-radius:8px;padding:12px 18px;min-height:46px;font:600 13px sans-serif}.ds-secondary:hover{background:#f1f4eb}.ds-secondary:focus-visible{outline:3px solid #648c3f;outline-offset:4px}"
+    },
+    {
+      "name": "Campo de producto",
+      "kind": "input",
+      "description": "Edición de información.",
+      "html": "<label class=\"ds-label\">Nombre<input class=\"ds-input\" placeholder=\"Nombre del producto\"></label>",
+      "css": ".ds-label{display:grid;gap:9px;font:600 12px sans-serif;color:var(--ink,#173e2c)}.ds-input{border:1px solid #dce3d6;border-radius:7px;padding:12px;font:14px sans-serif}.ds-input:focus-visible{outline:3px solid #648c3f;outline-offset:3px}"
+    },
+    {
+      "name": "Categoría",
+      "kind": "chip",
+      "description": "Filtrar los productos.",
+      "html": "<button class=\"ds-category\" aria-pressed=\"true\">Paneles</button>",
+      "css": ".ds-category{border:0;background:var(--ink,#173e2c);color:white;border-radius:8px;padding:11px 18px;min-height:44px;font:600 12px sans-serif}.ds-category:hover{background:#24583b}.ds-category:focus-visible{outline:3px solid #648c3f;outline-offset:4px}"
+    },
+    {
+      "name": "Estado de publicación",
+      "kind": "chip",
+      "description": "Identifica productos publicados en el panel.",
+      "html": "<span class=\"ds-status\">Publicado</span>",
+      "css": ".ds-status{display:inline-block;background:#edf5e5;color:#3a652e;padding:7px 10px;border-radius:6px;font:650 10px sans-serif}"
+    }
+  ],
+  "narrative": {
+    "overview": "Catálogo operativo de iluminación con fotografías amplias, precios visibles y acceso directo a la selección.",
+    "keyCharacteristics": [
+      "Productos antes que promociones",
+      "Cotización por WhatsApp",
+      "Edición desde móvil"
+    ],
+    "rules": [],
+    "dos": [],
+    "donts": []
+  }
+}

@@ -1,0 +1,13 @@
+---
+import Layout from '../layouts/Layout.astro';
+import Catalog from '../components/catalog/Catalog';
+import { getCatalog } from '../lib/server/products';
+import { isLocal } from '../lib/server/config';
+let catalog = { products: [], currency: 'USD' } as Awaited<ReturnType<typeof getCatalog>>;
+let error = '';
+try { catalog = await getCatalog(Astro); } catch (failure) { error = failure instanceof Error ? failure.message : 'No se pudo cargar el catálogo.'; Astro.response.status = 503; }
+Astro.response.headers.set('Cache-Control', 'no-store');
+---
+<Layout>
+  {error ? <main id="contenido" class="setup-state"><img src="/favicon.svg" alt="" width="52" height="52"/><h1>Villanueva</h1><p>{error}</p><a href="/" class="secondary">Volver a intentar</a></main> : <Catalog client:load initialProducts={catalog.products} initialCurrency={catalog.currency} demo={isLocal()}/>}
+</Layout>

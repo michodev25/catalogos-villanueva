@@ -1,0 +1,11 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Admin from '../../components/admin/Admin';
+import { isAdmin } from '../../lib/server/auth';
+import { getCatalog } from '../../lib/server/products';
+import { isLocal } from '../../lib/server/config';
+if (!await isAdmin(Astro)) return Astro.redirect('/admin/login');
+const catalog = await getCatalog(Astro, true);
+Astro.response.headers.set('Cache-Control', 'no-store');
+---
+<Layout title="Productos — Villanueva" privatePage><Admin client:load products={catalog.products} currency={catalog.currency} demo={isLocal()}/></Layout>

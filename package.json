@@ -1,0 +1,36 @@
+{
+  "name": "catalogos-villanueva",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "astro dev --host 127.0.0.1",
+    "build": "astro build",
+    "start": "node dist/server/entry.mjs",
+    "check": "astro check",
+    "test": "node --test tests/unit/*.test.ts",
+    "test:e2e": "playwright test",
+    "setup:local": "node scripts/setup-local.mjs"
+  },
+  "dependencies": {
+    "@astrojs/node": "^11.1.12",
+    "@astrojs/react": "^7.1.7",
+    "@fontsource-variable/manrope": "^5.3.0",
+    "@supabase/ssr": "^0.12.7",
+    "@supabase/supabase-js": "^2.119.0",
+    "astro": "^7.4.10",
+    "lucide-react": "^1.71.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "sharp": "^0.35.5",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.12",
+    "@playwright/test": "^1.65.0",
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "typescript": "^6.0.3"
+  }
+}
