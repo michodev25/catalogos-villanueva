@@ -100,9 +100,32 @@ export async function saveProduct(
         .eq("updated_at", expectedVersion)
         .select("id, updated_at")
     : await client.from("products").insert(row).select("id, updated_at");
+  if (result.error?.code === "23503")
+    throw new Error("Selecciona una categoría válida.");
   if (result.error || !result.data?.length)
     throw new Error(
       "No se pudo guardar. El producto pudo cambiar en otra pestaña. Recarga y revisa.",
     );
   return { ...product, updatedAt: result.data[0].updated_at as string };
+}
+
+export async function deleteProduct(context: APIContext, id: string, expectedVersion: string) {
+  if (isLocal()) {
+    const db = localDb();
+    const removed = db.prepare(
+      `DELETE FROM products WHERE id = ? AND json_extract(data, '$.updatedAt') = ?
+       RETURNING json_extract(data, '$.imagePath') AS image_path`,
+    ).get(id, expectedVersion);
+    return removed ? { imagePath: removed.image_path as string | null } : null;
+  }
+
+  const { data, error } = await supabase(context)
+    .from("products")
+    .delete()
+    .eq("id", id)
+    .eq("updated_at", expectedVersion)
+    .select("image_path")
+    .maybeSingle();
+  if (error) throw new Error("No se pudo eliminar el producto.");
+  return data ? { imagePath: data.image_path as string | null } : null;
 }

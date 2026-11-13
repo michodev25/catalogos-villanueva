@@ -16,11 +16,13 @@ El catálogo abre en `http://127.0.0.1:4321` y el panel en `http://127.0.0.1:432
 
 El modo local utiliza SQLite y fotografías en `.local/`. Los cambios sobreviven a los reinicios. Se limita al servidor de desarrollo en localhost. El archivo `.env` y la carpeta `.local/` están excluidos de Git. Para cambiar la contraseña, ejecutar de nuevo `npm run setup:local` y reiniciar el servidor. Esto también cierra las sesiones locales anteriores.
 
-Las fichas iniciales, los precios y las imágenes son ejemplos señalizados. Las fotos de LED y lámpara representan ambientes de iluminación. Cada ficha admite reemplazar la imagen y todos sus datos desde el panel. La moneda inicial es USD, configurable en **Configuración**. Cambiar la moneda conserva los importes existentes; los precios se editan desde cada producto.
+Las fichas iniciales, los precios y las imágenes son ejemplos señalizados. Cada ficha admite reemplazar la imagen y todos sus datos desde el panel. La moneda inicial es USD, configurable en **Configuración**. Cambiar la moneda conserva los importes existentes; los precios se editan desde cada producto.
 
 ## Funciones
 
 - Categorías, búsqueda, detalle de productos y precios visibles.
+- El propietario crea categorías en **Panel → Categorías** y las asigna desde el editor de productos. Todas las categorías aparecen en la tienda.
+- El propietario puede eliminar productos desde su ficha y eliminar categorías vacías desde **Panel → Categorías**.
 - Agregar y ajustar cantidades con **+ 1 −**. Persistencia del carrito en el navegador.
 - Acción única **Cotizar**. El servidor comprueba de nuevo precios y disponibilidad antes de generar el mensaje. El cliente pulsa Enviar dentro de WhatsApp.
 - Panel con cuenta única, campos editables, características, foto, disponibilidad y borradores.
@@ -29,7 +31,7 @@ Las fichas iniciales, los precios y las imágenes son ejemplos señalizados. Las
 
 ## Conectar Supabase
 
-1. Crear un proyecto de desarrollo y ejecutar `supabase/migrations/202611100001_catalog.sql` en el editor SQL de ese proyecto. La migración crea tablas, reglas de acceso y el bucket privado `products`.
+1. Crear un proyecto de desarrollo y ejecutar las migraciones de `supabase/migrations/` en orden. La primera crea el catálogo y el bucket privado `products`. Las siguientes habilitan la creación y eliminación de categorías para el propietario. En un proyecto existente, aplicar solo las migraciones pendientes.
 2. Deshabilitar nuevas inscripciones en la configuración de Auth. Crear una cuenta privada con correo y una contraseña única para producción.
 3. Registrar su UUID mediante `insert into private.store_admin (id, user_id) values (1, 'UUID_DE_LA_CUENTA');` desde el editor SQL con permisos administrativos.
 4. Configurar en el entorno del servidor `DATA_MODE=supabase`, `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY`, `ADMIN_EMAIL`, `ADMIN_USER_ID` y `APP_ORIGIN`. Este último debe coincidir con el origen HTTPS público, sin barra final.
@@ -71,8 +73,4 @@ En modo local, detener el servidor y copiar `.local/` junto al `.env` privado a 
 
 ## Fotografías de demostración
 
-Se descargaron fotografías de Unsplash para la vista local. El propietario debe reemplazarlas con imágenes de los artículos que venda.
-
-- Paneles solares, archivo obtenido desde `images.unsplash.com/photo-1509391366360-2e959784a276`.
-- Ambiente LED, archivo obtenido desde `images.unsplash.com/photo-1550745165-9bc0b252726f`.
-- Lámpara ilustrativa, archivo obtenido desde `images.unsplash.com/photo-1513506003901-1e6a229e2d15`.
+El pie del catálogo enlaza a los créditos de las fotografías de portada y demostración. El propietario puede reemplazar las fotos de muestra con imágenes de los artículos que venda.

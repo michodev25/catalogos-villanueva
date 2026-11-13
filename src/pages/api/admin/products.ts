@@ -1,10 +1,42 @@
 import type { APIRoute } from "astro";
 import { z } from "zod";
-import { categories, parsePrice, type Product } from "../../../lib/catalog";
+import { parsePrice, type Product } from "../../../lib/catalog";
 import { requireAdmin } from "../../../lib/server/auth";
-import { getCatalog, saveProduct } from "../../../lib/server/products";
+import { deleteProduct, getCatalog, saveProduct } from "../../../lib/server/products";
 import { uploadImage, removeImage } from "../../../lib/server/images";
 import { limitedForm } from "../../../lib/server/request";
+import { getCategories } from "../../../lib/server/categories";
+
+const productId = z.string().regex(/^[a-zA-Z0-9-]{1,100}$/);
+
+export const DELETE: APIRoute = async (context) => {
+  try {
+    await requireAdmin(context);
+  } catch {
+    return Response.json({ error: "Entra con tu cuenta para eliminar productos." }, { status: 401 });
+  }
+  try {
+    const form = await limitedForm(context.request, 4096);
+    const id = productId.safeParse(form.get("id"));
+    const version = z.iso.datetime({ offset: true }).safeParse(form.get("expectedUpdatedAt"));
+    if (!id.success || !version.success)
+      return Response.json({ error: "Recarga la ficha e inténtalo de nuevo." }, { status: 400 });
+
+    const removed = await deleteProduct(context, id.data, version.data);
+    if (!removed)
+      return Response.json(
+        { error: "Este producto cambió o ya fue eliminado. Recarga para revisar." },
+        { status: 409 },
+      );
+    if (removed.imagePath) await removeImage(context, removed.imagePath).catch(() => {});
+    return new Response(null, { status: 204, headers: { "Cache-Control": "no-store" } });
+  } catch {
+    return Response.json(
+      { error: "No se pudo eliminar el producto. Vuelve a intentarlo." },
+      { status: 500 },
+    );
+  }
+};
 
 export const POST: APIRoute = async (context) => {
   try {
@@ -19,16 +51,19 @@ export const POST: APIRoute = async (context) => {
   let saveStarted = false;
   try {
     const form = await limitedForm(context.request);
-    const id = z
-      .string()
-      .regex(/^[a-zA-Z0-9-]{1,100}$/)
-      .parse(form.get("id"));
+    const id = productId.parse(form.get("id"));
     const expected =
       z
         .string()
         .max(100)
         .parse(form.get("expectedUpdatedAt") || "") || null;
-    const { products } = await getCatalog(context, true);
+    const [{ products }, categories] = await Promise.all([
+      getCatalog(context, true),
+      getCategories(context),
+    ]);
+    const category = form.get("category");
+    if (typeof category !== "string" || !categories.some(({ id }) => id === category))
+      throw new Error("Selecciona una categoría válida.");
     const current = products.find((item) => item.id === id);
     if ((current?.updatedAt || null) !== expected)
       throw new Error(
@@ -47,10 +82,7 @@ export const POST: APIRoute = async (context) => {
         .trim()
         .max(4000)
         .parse(form.get("description") || ""),
-      category: z
-        .string()
-        .refine((value) => categories.some((item) => item.id === value))
-        .parse(form.get("category")),
+      category,
       specifications: z
         .array(
           z.object({

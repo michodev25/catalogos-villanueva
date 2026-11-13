@@ -2,28 +2,36 @@ import { useEffect, useRef, useState } from "react";
 import {
   ArrowUpRight,
   ChevronRight,
+  Grid2X2,
+  LampWallUp,
   Lightbulb,
   Minus,
   Plus,
   Search,
-  ShoppingBag,
-  SlidersHorizontal,
-  Sun,
+  ShoppingCart,
+  SolarPanel,
+  Tag,
   X,
   Zap,
 } from "lucide-react";
 import WhatsAppIcon from "../WhatsAppIcon";
 import {
-  categories,
   formatMoney,
   readCart,
   setQuantity,
   type Product,
+  type Category,
   type CartItem,
   type Quote,
 } from "../../lib/catalog";
 
 const storageKey = "villanueva.cart.v1";
+const categoryIcons = new Map([
+  ["todos", Grid2X2],
+  ["paneles", SolarPanel],
+  ["led", Zap],
+  ["lamparas", LampWallUp],
+]);
 const normalize = (text: string) =>
   text
     .normalize("NFD")
@@ -37,12 +45,12 @@ const photo = (product: Product) =>
 export default function Catalog({
   initialProducts,
   initialCurrency,
-  demo,
+  categories,
   initialProductId,
 }: {
   initialProducts: Product[];
   initialCurrency: string;
-  demo: boolean;
+  categories: Category[];
   initialProductId?: string;
 }) {
   const [products, setProducts] = useState(initialProducts);
@@ -63,6 +71,7 @@ export default function Catalog({
   const [longMessage, setLongMessage] = useState("");
   const cartDialog = useRef<HTMLDialogElement>(null);
   const detailDialog = useRef<HTMLDialogElement>(null);
+  const catalogHeading = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
     try {
@@ -94,10 +103,13 @@ export default function Catalog({
   useEffect(() => {
     detail ? detailDialog.current?.showModal() : detailDialog.current?.close();
   }, [detail]);
+  const query = normalize(search.trim());
+  const categoryFilters = [{ id: "todos", name: "Todos" }, ...categories];
+  const categoryTitle = categories.find(({ id }) => id === category)?.name;
   const visible = products.filter(
     (product) =>
       (category === "todos" || product.category === category) &&
-      normalize(product.name).includes(normalize(search)),
+      normalize(product.name).includes(query),
   );
   const totalCount = cart.reduce((sum, item) => sum + item.quantity, 0);
   const total = cart.reduce(
@@ -124,12 +136,12 @@ export default function Catalog({
         : "Cantidad actualizada.",
     );
   };
-  const quantityControl = (product: Product, compact = false) => {
+  const quantityControl = (product: Product) => {
     const count =
       cart.find((item) => item.productId === product.id)?.quantity || 0;
     if (!product.available) return <span className="sold-out">Agotado</span>;
     return count ? (
-      <div className={`quantity ${compact ? "compact" : ""}`}>
+      <div className="quantity">
         <button
           type="button"
           aria-label={`Agregar una unidad de ${product.name}`}
@@ -155,7 +167,7 @@ export default function Catalog({
         onClick={() => change(product.id, 1)}
         aria-label={`Agregar ${product.name}`}
       >
-        <Plus size={17} /> Agregar
+        <ShoppingCart size={17} aria-hidden="true" /> Agregar
       </button>
     );
   };
@@ -217,110 +229,108 @@ export default function Catalog({
 
   return (
     <>
-      {demo && (
-        <div className="demo-banner">
-          Vista de demostración · Imágenes y precios de ejemplo
-        </div>
-      )}
-      <header className="site-header shell">
-        <a className="brand" href="/" aria-label="Villanueva, inicio">
-          <img src="/favicon.svg" alt="" width="36" height="36" />
-          <span>
-            villanueva<span className="brand-dot">.</span>
-          </span>
-        </a>
-        <nav aria-label="Navegación principal">
-          <a href="#catalogo" className="nav-link">
-            Catálogo
+      <div className="site-top">
+        <header className="site-header shell">
+          <a className="brand" href="/" aria-label="Villanueva, inicio">
+            <img src="/villanueva-logo.png" alt="" width="44" height="44" />
+            <span>Villanueva</span>
           </a>
+          <form
+            className="store-search"
+            role="search"
+            onSubmit={(event) => {
+              event.preventDefault();
+              catalogHeading.current?.focus({ preventScroll: true });
+              catalogHeading.current?.scrollIntoView({ block: "nearest" });
+            }}
+          >
+            <input
+              type="search"
+              placeholder="Buscar en Villanueva"
+              aria-label="Buscar productos"
+              disabled={!ready}
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+            />
+            <button
+              type="submit"
+              aria-label="Buscar en el catálogo"
+              disabled={!ready}
+            >
+              <Search size={21} aria-hidden="true" />
+            </button>
+          </form>
           <button
             className="header-cart"
             disabled={!ready}
             onClick={() => setCartOpen(true)}
             aria-label={`Abrir carrito, ${totalCount} artículos`}
           >
-            <ShoppingBag size={20} />
+            <ShoppingCart size={24} aria-hidden="true" />
             <span>Mi selección</span>
-            <b>{totalCount}</b>
+            <b aria-hidden="true">{totalCount}</b>
           </button>
-        </nav>
-      </header>
+        </header>
+      </div>
+      <div className="store-categories">
+        <div
+          className="category-tabs shell"
+          role="group"
+          aria-label="Filtrar por categoría"
+        >
+          {categoryFilters.map(({ id, name }) => {
+            const Icon = categoryIcons.get(id) ?? Tag;
+            return (
+              <button
+                key={id}
+                className={category === id ? "selected" : ""}
+                aria-pressed={category === id}
+                disabled={!ready}
+                onClick={() => setCategory(id)}
+              >
+                <Icon size={18} aria-hidden="true" />
+                <span>{name}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
       <main id="contenido" className="shell" inert={!ready} aria-busy={!ready}>
-        <section className="intro">
-          <div>
-            <h1>
-              Energía e iluminación
-              <br />
-              <span>para tu espacio.</span>
-            </h1>
-            <p>
-              Explora nuestros productos y prepara tu selección.
-              <br className="desktop-break" /> Te ayudamos con tu cotización por
-              WhatsApp.
-            </p>
-            <a className="text-link" href="#catalogo">
-              Explorar el catálogo <ArrowUpRight size={18} />
-            </a>
-          </div>
-          <aside className="intro-note">
-            <div className="sun-symbol">
-              <Sun size={42} strokeWidth={1.2} />
+        {!query && category === "todos" && (
+          <section className="intro">
+            <img
+              className="intro-photo"
+              src="/catalogo-portada.webp"
+              width="1440"
+              height="789"
+              fetchPriority="high"
+              alt=""
+            />
+            <div className="intro-content">
+              <h1>Energía e <span>iluminación</span></h1>
+              <p>Paneles solares, tiras LED y lámparas. Arma tu selección y cotiza por WhatsApp.</p>
+              <a className="primary intro-link" href="#catalogo">
+                Ver productos <ChevronRight size={17} aria-hidden="true" />
+              </a>
             </div>
-            <p>
-              De la energía del sol
-              <br />a la luz de tu hogar.
-            </p>
-            <span>Paneles · Iluminación LED · Solar</span>
-          </aside>
-        </section>
+          </section>
+        )}
         <section
           id="catalogo"
           className="catalog-section"
           aria-label="Catálogo de productos"
         >
           <div className="catalog-heading">
-            <div>
-              <h2>Nuestro catálogo</h2>
-              <span>
-                {visible.length}{" "}
-                {visible.length === 1 ? "producto" : "productos"}
-              </span>
-            </div>
-            <label className="search-box">
-              <Search size={19} />
-              <input
-                type="search"
-                placeholder="Buscar un producto…"
-                aria-label="Buscar productos"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-              />
-            </label>
-          </div>
-          <div
-            className="category-tabs"
-            role="group"
-            aria-label="Filtrar por categoría"
-          >
-            {[{ id: "todos", name: "Todos los productos" }, ...categories].map(
-              (item, index) => {
-                const Icon = [SlidersHorizontal, Sun, Zap, Lightbulb][index];
-                return (
-                  <button
-                    key={item.id}
-                    className={category === item.id ? "selected" : ""}
-                    aria-pressed={category === item.id}
-                    onClick={() => setCategory(item.id)}
-                  >
-                    <Icon size={17} />
-                    {item.name}
-                  </button>
-                );
-              },
-            )}
+            <h2 ref={catalogHeading} tabIndex={-1}>
+              {categoryTitle ?? "Todos los productos"}
+            </h2>
+            <span role="status">
+              {visible.length}{" "}
+              {visible.length === 1 ? "producto" : "productos"}
+            </span>
           </div>
           <div className="product-grid">
-            {visible.map((product) => (
+            {visible.map((product, index) => (
               <article
                 className="product-card"
                 key={product.id}
@@ -337,7 +347,7 @@ export default function Catalog({
                     <img
                       src={photo(product)}
                       alt={product.name}
-                      loading="lazy"
+                      loading={index < 3 ? "eager" : "lazy"}
                       width="600"
                       height="460"
                     />
@@ -347,26 +357,25 @@ export default function Catalog({
                       <span>Imagen pendiente</span>
                     </span>
                   )}
-                  <span className="image-arrow">
+                  <span className="image-arrow" aria-hidden="true">
                     <ArrowUpRight size={18} />
                   </span>
-                  {!product.available && (
-                    <span className="image-status">Agotado</span>
-                  )}
                 </button>
                 <div className="product-content">
-                  <button
-                    className="product-title"
-                    onClick={() => setDetail(product)}
-                  >
-                    {product.name}
-                  </button>
                   <p>
                     {
                       categories.find((item) => item.id === product.category)
                         ?.name
                     }
                   </p>
+                  <h3>
+                    <button
+                      className="product-title"
+                      onClick={() => setDetail(product)}
+                    >
+                      {product.name}
+                    </button>
+                  </h3>
                   <div className="product-bottom">
                     <strong>
                       {formatMoney(product.priceMinor || 0, currency)}
@@ -381,7 +390,9 @@ export default function Catalog({
             <div className="empty-state">
               <Search size={32} />
               <h3>
-                {products.length
+                {!query && categoryTitle
+                  ? "Aún no hay productos en esta categoría"
+                  : products.length
                   ? "No encontramos ese producto"
                   : "Estamos preparando el catálogo"}
               </h3>
@@ -390,7 +401,7 @@ export default function Catalog({
                   ? "Prueba otro nombre o explora todas las categorías."
                   : "Vuelve pronto para descubrir los productos de Villanueva."}
               </p>
-              {products.length > 0 && (
+              {(products.length > 0 || categoryTitle) && (
                 <button
                   className="secondary"
                   onClick={() => {
@@ -407,18 +418,17 @@ export default function Catalog({
         <section className="help-strip">
           <WhatsAppIcon size={28} />
           <div>
-            <h3>Tu selección, una conversación.</h3>
+            <h2>Cotiza por WhatsApp</h2>
             <p>
               Agrega los productos que te interesan y pulsa Cotizar. Confirmamos
               disponibilidad y entrega contigo.
             </p>
           </div>
-          <ChevronRight size={23} />
         </section>
       </main>
       <footer className="site-footer shell">
         <span>© {new Date().getFullYear()} Villanueva</span>
-        <span>Energía e iluminación</span>
+        <a href="/creditos-fotograficos">Créditos de fotos</a>
         <a href="/admin">
           Administrar catálogo <ArrowUpRight size={14} />
         </a>
@@ -429,7 +439,7 @@ export default function Catalog({
       {totalCount > 0 && (
         <button className="mobile-cart" onClick={() => setCartOpen(true)}>
           <span>
-            <ShoppingBag size={20} />
+            <ShoppingCart size={20} />
             <b>{totalCount}</b> Ver selección
           </span>
           <strong>
@@ -475,8 +485,12 @@ export default function Catalog({
               );
               return (
                 <div className="cart-line" key={line.productId}>
-                  {product?.imagePath && (
+                  {product?.imagePath ? (
                     <img src={photo(product)} alt="" width="76" height="76" />
+                  ) : (
+                    <span className="cart-line-placeholder" aria-hidden="true">
+                      <Lightbulb size={24} />
+                    </span>
                   )}
                   <div className="cart-line-info">
                     <h3>{product?.name || "Producto no disponible"}</h3>
@@ -487,7 +501,7 @@ export default function Catalog({
                       )}
                     </p>
                     {product?.available ? (
-                      quantityControl(product, true)
+                      quantityControl(product)
                     ) : (
                       <button
                         className="text-link"
@@ -508,7 +522,7 @@ export default function Catalog({
             })}
             {!cart.length && (
               <div className="empty-state">
-                <ShoppingBag size={38} />
+                <ShoppingCart size={38} />
                 <h3>Aún no has elegido productos</h3>
                 <p>Explora el catálogo y agrega los que te interesan.</p>
                 <button
@@ -593,7 +607,9 @@ export default function Catalog({
         aria-labelledby="detail-title"
       >
         {detail && (
-          <div className="detail-inner">
+          <div
+            className={detail.imagePath ? "detail-inner" : "detail-inner detail-no-photo"}
+          >
             <button
               className="icon-button detail-close"
               onClick={() => setDetail(null)}
@@ -613,25 +629,29 @@ export default function Catalog({
               <strong className="detail-price">
                 {formatMoney(detail.priceMinor || 0, currency)}
               </strong>
-              <p>{detail.description}</p>
-              <dl>
-                {detail.specifications.map((item, index) => (
-                  <div key={index}>
-                    <dt>{item.label}</dt>
-                    <dd>{item.value}</dd>
-                  </div>
-                ))}
-              </dl>
-              {quantityControl(detail)}
-              <button
-                className="text-link detail-cart-link"
-                onClick={() => {
-                  setDetail(null);
-                  setCartOpen(true);
-                }}
-              >
-                Ver mi selección <ChevronRight size={16} />
-              </button>
+              {detail.description && <p>{detail.description}</p>}
+              {detail.specifications.length > 0 && (
+                <dl>
+                  {detail.specifications.map((item, index) => (
+                    <div key={index}>
+                      <dt>{item.label}</dt>
+                      <dd>{item.value}</dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
+              <div className="detail-actions">
+                {quantityControl(detail)}
+                <button
+                  className="text-link detail-selection"
+                  onClick={() => {
+                    setDetail(null);
+                    setCartOpen(true);
+                  }}
+                >
+                  Ver mi selección <ChevronRight size={16} />
+                </button>
+              </div>
             </div>
           </div>
         )}

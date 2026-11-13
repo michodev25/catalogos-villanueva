@@ -1,8 +1,23 @@
-export const categories = [
+export interface Category {
+  id: string;
+  name: string;
+}
+
+export const defaultCategories: Category[] = [
   { id: "paneles", name: "Paneles" },
   { id: "led", name: "Tiras LED RGB" },
   { id: "lamparas", name: "Lámparas solares" },
 ];
+
+export function sortCategories(categories: Category[]): Category[] {
+  const defaults = defaultCategories.flatMap(({ id }) =>
+    categories.filter((category) => category.id === id),
+  );
+  const custom = categories.filter(({ id }) =>
+    !defaultCategories.some((category) => category.id === id),
+  );
+  return [...defaults, ...custom.sort((a, b) => a.name.localeCompare(b.name, "es"))];
+}
 export interface Product {
   id: string;
   name: string;

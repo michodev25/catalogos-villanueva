@@ -2,20 +2,21 @@
 name: Catálogos Villanueva
 description: Catálogo de energía e iluminación con cotización por WhatsApp
 colors:
-  primary: "#173e2c"
-  background: "#fafbf7"
+  primary: "#131a13"
+  navigation: "#263323"
+  background: "#f2f4ee"
   surface: "#ffffff"
-  muted: "#627166"
-  border: "#e0e6da"
-  accent: "#d6eab2"
+  muted: "#535e4e"
+  border: "#dce2d5"
+  accent: "#b9db78"
 typography:
   body:
     fontFamily: "Manrope Variable, sans-serif"
   display:
-    fontFamily: "Manrope Variable, sans-serif"
-    fontSize: "clamp(32px, 3.8vw, 49px)"
-    fontWeight: 700
-    lineHeight: 1.13
+    fontFamily: "Archivo Black, Manrope Variable, sans-serif"
+    fontSize: "clamp(32px, 4.1vw, 58px)"
+    fontWeight: 400
+    lineHeight: 0.98
     letterSpacing: "-0.04em"
 rounded:
   control: "8px"
@@ -23,8 +24,8 @@ rounded:
   dialog: "16px"
 components:
   button-primary:
-    backgroundColor: "{colors.primary}"
-    textColor: "{colors.surface}"
+    backgroundColor: "{colors.accent}"
+    textColor: "{colors.primary}"
     rounded: "{rounded.control}"
     padding: "12px 18px"
 ---
@@ -33,12 +34,13 @@ components:
 
 ## Overview
 
-La interfaz se apoya en un catálogo de iluminación contemporáneo. Fotografías amplias, precios legibles y controles de selección compactos. La composición de referencia funcional es El Yerro, con un lenguaje visual propio para Villanueva.
+La navegación toma como referencia las tiendas en línea con buscador central y una segunda fila para categorías. El emblema del carrito con palmera define el verde lima y la tinta oscura de Villanueva.
 
 ## Layout
 
-- Manrope Variable alojada en el proyecto.
-- Fondo marfil verdoso #fafbf7, tinta verde #173e2c, texto secundario #627166 y bordes #e0e6da.
+- UnifrakturMaguntia para el nombre Villanueva junto al emblema. Archivo Black para titulares y Manrope Variable para búsqueda, controles y texto. Las tres familias se sirven desde el proyecto.
+- Cabecera oscura con búsqueda de ancho flexible, carrito y categorías con iconos Lucide. Las categorías pasan a filas adicionales según el espacio disponible. En móvil, la búsqueda usa todo el ancho disponible.
+- Portada con titular y foto ambiental. Al buscar o filtrar, los resultados ocupan su lugar.
 - Productos en tres columnas de escritorio y dos columnas de móvil. Controles de cantidad de 44 px.
 - Agregar y el selector de cantidad comparten un espacio de 120 × 46 px. En tarjetas estrechas ocupan una fila completa bajo el precio; cambiar la cantidad conserva la posición y el tamaño de la tarjeta. Los productos seleccionados se distinguen con un borde verde suave.
 - El carrito usa panel lateral en escritorio y diálogo de pantalla completa en móvil.
@@ -47,8 +49,8 @@ La interfaz se apoya en un catálogo de iluminación contemporáneo. Fotografía
 
 ## Components
 
-Las tres fotografías de demostración ilustran energía e iluminación. Las fotos de LED y lámpara muestran ambientes genéricos. El propietario reemplaza esas imágenes y los datos de ejemplo antes de publicar. La vista local identifica el contenido de muestra.
+Las fotografías de demostración ilustran los tipos de producto. El propietario reemplaza esas imágenes y los datos de ejemplo antes de publicar. El panel local y las fichas de muestra identifican ese contenido.
 
-## Implementation notes
+## Imágenes
 
-Se consultaron las guías de contexto, nuevo trabajo, planificación y calidad. El motor pudo generar una propuesta de dirección, con referencia seed:18244405ed62ea43. Se tomó una decisión visual provisional para continuar la ejecución aprobada, catálogo claro con acentos verdes. La revisión visual se realiza sobre capturas reales de móvil y escritorio.
+El emblema de `public/villanueva-logo.png` proviene del archivo entregado por el propietario. La portada muestra una instalación solar fotografiada por Wikideas1. Los créditos y licencias se consultan desde el pie del catálogo.

@@ -9,9 +9,10 @@ import {
   Plus,
   Search,
   Settings,
+  Tags,
   Trash2,
 } from "lucide-react";
-import { categories, formatMoney, type Product } from "../../lib/catalog";
+import { formatMoney, sortCategories, type Category, type Product } from "../../lib/catalog";
 
 const imageUrl = (product: Product) =>
   product.imagePath?.startsWith("demo/")
@@ -20,13 +21,17 @@ const imageUrl = (product: Product) =>
 export default function Admin({
   products,
   currency,
+  initialCategories,
   editId,
   demo,
+  section = "products",
 }: {
   products: Product[];
   currency: string;
+  initialCategories: Category[];
   editId?: string;
   demo: boolean;
+  section?: "products" | "categories";
 }) {
   const existing = products.find((product) => product.id === editId);
   const [ready, setReady] = useState(false);
@@ -34,7 +39,7 @@ export default function Admin({
     existing || {
       id: "",
       name: "",
-      category: "paneles",
+      category: initialCategories[0]?.id ?? "",
       description: "",
       specifications: [],
       priceMinor: null,
@@ -50,11 +55,17 @@ export default function Admin({
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState("");
   const [busy, setBusy] = useState(false);
+  const [deletingProduct, setDeletingProduct] = useState(false);
   const [message, setMessage] = useState("");
   const [success, setSuccess] = useState(false);
   const [needsLogin, setNeedsLogin] = useState(false);
   const [query, setQuery] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [categories, setCategories] = useState(initialCategories);
+  const [categoryName, setCategoryName] = useState("");
+  const [categoryBusy, setCategoryBusy] = useState(false);
+  const [deletingCategory, setDeletingCategory] = useState<string>();
+  const [categoryFeedback, setCategoryFeedback] = useState<{ error: boolean; text: string }>();
   useEffect(() => {
     setReady(true);
     if (!product.id)
@@ -137,19 +148,106 @@ export default function Admin({
       setMessage("No se pudo cambiar la moneda. Vuelve a intentarlo.");
     }
   }
+  const visibleProducts = products.filter((item) =>
+    item.name.toLowerCase().includes(query.trim().toLowerCase()),
+  );
+  const publishedCount = visibleProducts.filter((item) => item.published).length;
+
+  async function createCategory(event: React.SubmitEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const form = new FormData(event.currentTarget);
+    setCategoryBusy(true);
+    setCategoryFeedback(undefined);
+    try {
+      const response = await fetch("/api/admin/categories", { method: "POST", body: form });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || "No se pudo crear la categoría.");
+      setCategories((current) => sortCategories([...current, result.category]));
+      setCategoryName("");
+      setCategoryFeedback({ error: false, text: "Categoría creada." });
+    } catch (error) {
+      setCategoryFeedback({
+        error: true,
+        text: error instanceof Error ? error.message : "No se pudo crear la categoría.",
+      });
+    } finally {
+      setCategoryBusy(false);
+    }
+  }
+
+  async function removeCategory(category: Category) {
+    if (!confirm(`¿Eliminar la categoría «${category.name}»?`)) return;
+
+    const form = new FormData();
+    form.set("id", category.id);
+    setDeletingCategory(category.id);
+    setCategoryFeedback(undefined);
+    try {
+      const response = await fetch("/api/admin/categories", { method: "DELETE", body: form });
+      if (!response.ok) {
+        const result = await response.json();
+        throw new Error(result.error || "No se pudo eliminar la categoría.");
+      }
+      setCategories((current) => current.filter(({ id }) => id !== category.id));
+      setCategoryFeedback({ error: false, text: "Categoría eliminada." });
+    } catch (error) {
+      setCategoryFeedback({
+        error: true,
+        text: error instanceof Error ? error.message : "No se pudo eliminar la categoría.",
+      });
+    } finally {
+      setDeletingCategory(undefined);
+    }
+  }
+
+  async function removeProduct() {
+    const name = product.name || "Producto sin nombre";
+    if (!confirm(`¿Eliminar «${name}» de forma permanente?`)) return;
+
+    const form = new FormData();
+    form.set("id", product.id);
+    form.set("expectedUpdatedAt", product.updatedAt);
+    setDeletingProduct(true);
+    setMessage("");
+    setSuccess(false);
+    setNeedsLogin(false);
+    try {
+      const response = await fetch("/api/admin/products", { method: "DELETE", body: form });
+      if (!response.ok) {
+        const result = await response.json();
+        if (response.status === 401) setNeedsLogin(true);
+        throw new Error(result.error || "No se pudo eliminar el producto.");
+      }
+      location.replace("/admin");
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "No se pudo eliminar el producto.");
+      setDeletingProduct(false);
+    }
+  }
+
   return (
     <div className="admin-app" inert={!ready} aria-busy={!ready}>
       <aside className="admin-sidebar">
         <a className="brand" href="/">
-          <img src="/favicon.svg" alt="" width="35" height="35" />
-          <span>villanueva.</span>
+          <img src="/villanueva-logo.png" alt="" width="40" height="40" />
+          <span>Villanueva</span>
         </a>
         <span className="admin-label">Tu catálogo</span>
-        <nav>
-          <a className="active" href="/admin">
+        <nav aria-label="Administración del catálogo">
+          <a className={section === "products" ? "active" : undefined} href="/admin">
             <LayoutGrid size={19} /> Productos
           </a>
-          <button onClick={() => setSettingsOpen(!settingsOpen)}>
+          <a
+            className={section === "categories" ? "active" : undefined}
+            aria-current={section === "categories" ? "page" : undefined}
+            href="/admin/categorias"
+          >
+            <Tags size={19} aria-hidden="true" /> Categorías
+          </a>
+          <button
+            aria-expanded={settingsOpen}
+            onClick={() => setSettingsOpen(!settingsOpen)}
+          >
             <Settings size={19} /> Configuración
           </button>
           <a href="/" target="_blank" rel="noreferrer">
@@ -191,7 +289,69 @@ export default function Admin({
             </form>
           </section>
         )}
-        {!editId ? (
+        {section === "categories" ? (
+          <>
+            <div className="admin-heading">
+              <div>
+                <h1>Categorías</h1>
+                <p>Organiza los productos y ayuda a tus clientes a encontrarlos.</p>
+              </div>
+            </div>
+            <div className="admin-category-layout">
+              <section className="form-section">
+                <h2>Nueva categoría</h2>
+                <form className="category-form" onSubmit={createCategory}>
+                  <label>
+                    Nombre de la categoría
+                    <input
+                      name="name"
+                      value={categoryName}
+                      onChange={(event) => setCategoryName(event.target.value)}
+                      placeholder="Ej. Accesorios eléctricos"
+                      maxLength={60}
+                      required
+                      readOnly={categoryBusy}
+                    />
+                  </label>
+                  <button className="primary" disabled={categoryBusy || Boolean(deletingCategory)}>
+                    <Plus size={18} aria-hidden="true" />
+                    {categoryBusy ? "Creando…" : "Crear categoría"}
+                  </button>
+                </form>
+              </section>
+              <section className="form-section">
+                <h2>Categorías de la tienda</h2>
+                {categoryFeedback && (
+                  <p
+                    className={`feedback category-feedback ${categoryFeedback.error ? "" : "success"}`}
+                    role={categoryFeedback.error ? "alert" : "status"}
+                  >
+                    {categoryFeedback.text}
+                  </p>
+                )}
+                {categories.length === 0 && <p>Aún no hay categorías. Crea una para empezar.</p>}
+                <ul className="admin-category-list">
+                  {categories.map(({ id, name }) => (
+                    <li key={id}>
+                      <Tags size={17} aria-hidden="true" />
+                      <span>{name}</span>
+                      <button
+                        type="button"
+                        className="icon-button danger"
+                        aria-label={`Eliminar categoría ${name}`}
+                        title={`Eliminar categoría ${name}`}
+                        disabled={categoryBusy || Boolean(deletingCategory)}
+                        onClick={() => removeCategory({ id, name })}
+                      >
+                        <Trash2 size={18} aria-hidden="true" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            </div>
+          </>
+        ) : !editId ? (
           <>
             <div className="admin-heading">
               <div>
@@ -203,13 +363,15 @@ export default function Admin({
               </a>
             </div>
             <div className="admin-toolbar">
-              <span>
-                {products.length} productos ·{" "}
-                {products.filter((item) => item.published).length} publicados
+              <span role="status">
+                {visibleProducts.length}{" "}
+                {visibleProducts.length === 1 ? "producto" : "productos"} ·{" "}
+                {publishedCount} {publishedCount === 1 ? "publicado" : "publicados"}
               </span>
               <label className="search-box">
-                <Search size={18} />
+                <Search size={18} aria-hidden="true" />
                 <input
+                  type="search"
                   placeholder="Buscar en tus productos…"
                   aria-label="Buscar productos para editar"
                   value={query}
@@ -218,11 +380,11 @@ export default function Admin({
               </label>
             </div>
             <div className="admin-products">
-              {products
-                .filter((item) =>
-                  item.name.toLowerCase().includes(query.toLowerCase()),
-                )
-                .map((item) => (
+              {visibleProducts.map((item) => {
+                const status = !item.published
+                  ? "Borrador"
+                  : item.available ? "Publicado" : "Agotado";
+                return (
                   <a
                     className="admin-product-row"
                     href={`/admin/productos/${item.id}`}
@@ -257,23 +419,28 @@ export default function Admin({
                         ? "Precio pendiente"
                         : formatMoney(item.priceMinor, currency)}
                     </strong>
-                    <span
-                      className={`status-badge ${item.published ? "published" : ""}`}
-                    >
-                      {item.published
-                        ? item.available
-                          ? "Publicado"
-                          : "Agotado"
-                        : "Borrador"}
+                    <span className="status-badge" data-status={status}>
+                      {status}
                     </span>
                     <ArrowUpRight size={18} />
                   </a>
-                ))}
+                );
+              })}
               {!products.length && (
                 <div className="empty-state">
                   <ImagePlus size={32} />
                   <h2>Tu primer producto empieza aquí</h2>
                   <p>Añade una foto, el nombre y el precio para publicarlo.</p>
+                </div>
+              )}
+              {products.length > 0 && visibleProducts.length === 0 && (
+                <div className="empty-state">
+                  <Search size={32} aria-hidden="true" />
+                  <h2>No encontramos productos</h2>
+                  <p>Prueba con otro nombre o vuelve a la lista completa.</p>
+                  <button className="secondary" onClick={() => setQuery("")}>
+                    Ver todos los productos
+                  </button>
                 </div>
               )}
             </div>
@@ -293,7 +460,8 @@ export default function Admin({
                 <p>La información que ayudará a tus clientes a elegir.</p>
               </div>
               <span
-                className={`status-badge ${product.published ? "published" : ""}`}
+                className="status-badge"
+                data-status={product.published ? "Publicado" : "Borrador"}
               >
                 {product.published ? "Publicado" : "Borrador"}
               </span>
@@ -301,7 +469,7 @@ export default function Admin({
             <form className="product-form" onSubmit={save}>
               <fieldset
                 className="form-fields"
-                disabled={busy}
+                disabled={busy || deletingProduct}
                 aria-label="Editar producto"
               >
                 <div className="form-main">
@@ -325,6 +493,7 @@ export default function Admin({
                             update("category", event.target.value)
                           }
                         >
+                          {categories.length === 0 && <option value="">Sin categorías</option>}
                           {categories.map((item) => (
                             <option value={item.id} key={item.id}>
                               {item.name}
@@ -342,6 +511,9 @@ export default function Admin({
                         />
                       </label>
                     </div>
+                    {categories.length === 0 && (
+                      <a className="text-link" href="/admin/categorias">Crear una categoría</a>
+                    )}
                     <label>
                       Descripción
                       <textarea
@@ -513,10 +685,20 @@ export default function Admin({
                       )}
                     </p>
                   )}
+                  {product.updatedAt && (
+                    <button
+                      className="secondary danger delete-product"
+                      type="button"
+                      onClick={removeProduct}
+                    >
+                      <Trash2 size={17} aria-hidden="true" />
+                      {deletingProduct ? "Eliminando…" : "Eliminar producto"}
+                    </button>
+                  )}
                   <a className="secondary" href="/admin">
                     Volver
                   </a>
-                  <button className="primary" disabled={busy || !product.id}>
+                  <button className="primary" disabled={busy || !product.id || !product.category}>
                     {busy ? "Guardando…" : "Guardar producto"}
                   </button>
                 </div>

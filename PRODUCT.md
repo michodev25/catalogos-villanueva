@@ -26,6 +26,7 @@ El propietario publica productos, cambia precios, reemplaza fotos y marca dispon
 
 - Todos los productos publicados tienen precio visible.
 - El panel permite editar nombre, contenido, especificaciones, foto, categoría, precio y disponibilidad.
+- El propietario puede crear categorías. La tienda muestra todas las categorías y las distribuye en varias filas según el ancho.
 - El acceso administrativo pertenece únicamente al propietario. Los clientes consultan el catálogo sin registro.
 - El diseño funcional aprobado está en `docs/superpowers/specs/2026-11-10-catalogos-villanueva-design.md`.
 - La primera versión propone una foto principal por producto y una ficha independiente por presentación.
@@ -37,7 +38,7 @@ Nombre de trabajo Catálogos Villanueva. Idioma español. El Yerro Menú es la r
 
 ## Evidence on Hand
 
-La conversación y el diseño aprobado definen las funciones. Aún faltan el logo, las fotografías reales y las fichas comerciales. El contenido de demostración debe identificarse como tal y permanecer separado de los productos publicados.
+La conversación y el diseño aprobado definen las funciones. El propietario aportó el emblema del carrito con palmera. Aún faltan las fotografías reales y las fichas comerciales. El contenido de demostración debe identificarse como tal y permanecer separado de los productos publicados.
 
 ## Product Principles
 

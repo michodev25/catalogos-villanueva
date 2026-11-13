@@ -1,7 +1,7 @@
 import { DatabaseSync } from "node:sqlite";
 import { mkdirSync } from "node:fs";
 import { resolve } from "node:path";
-import type { Product } from "../catalog";
+import { defaultCategories, type Product } from "../catalog";
 
 let database: DatabaseSync;
 export function localDb() {
@@ -10,11 +10,31 @@ export function localDb() {
   database = new DatabaseSync(resolve(".local/catalog.sqlite"));
   database.exec(`PRAGMA journal_mode=WAL;
     CREATE TABLE IF NOT EXISTS products (id TEXT PRIMARY KEY, data TEXT NOT NULL);
+    CREATE TABLE IF NOT EXISTS categories (id TEXT PRIMARY KEY, name TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS settings (id INTEGER PRIMARY KEY CHECK(id=1), currency TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS sessions (token TEXT PRIMARY KEY, expires INTEGER NOT NULL);
     CREATE TABLE IF NOT EXISTS metadata (id INTEGER PRIMARY KEY);
-    INSERT OR IGNORE INTO settings VALUES(1, 'USD');`);
-  if (!database.prepare("SELECT id FROM metadata").get()) {
+    INSERT OR IGNORE INTO settings VALUES(1, 'USD');
+    CREATE TRIGGER IF NOT EXISTS product_category_insert BEFORE INSERT ON products
+    WHEN NOT EXISTS (SELECT 1 FROM categories WHERE id = json_extract(NEW.data, '$.category'))
+    BEGIN SELECT RAISE(ABORT, 'Selecciona una categoría válida.'); END;
+    CREATE TRIGGER IF NOT EXISTS product_category_update BEFORE UPDATE OF data ON products
+    WHEN NOT EXISTS (SELECT 1 FROM categories WHERE id = json_extract(NEW.data, '$.category'))
+    BEGIN SELECT RAISE(ABORT, 'Selecciona una categoría válida.'); END;`);
+
+  database.exec("BEGIN IMMEDIATE");
+  try {
+    if (!database.prepare("SELECT id FROM metadata WHERE id=2").get()) {
+      const seedCategory = database.prepare("INSERT OR IGNORE INTO categories (id, name) VALUES (?, ?)");
+      for (const { id, name } of defaultCategories) seedCategory.run(id, name);
+      database.prepare("INSERT INTO metadata VALUES(2)").run();
+    }
+    database.exec("COMMIT");
+  } catch (error) {
+    database.exec("ROLLBACK");
+    throw error;
+  }
+  if (!database.prepare("SELECT id FROM metadata WHERE id=1").get()) {
     const examples: Product[] = [
       {
         id: "demo-panel",

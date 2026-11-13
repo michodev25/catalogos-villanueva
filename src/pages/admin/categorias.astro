@@ -1,0 +1,15 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import Admin from '../../components/admin/Admin';
+import { isAdmin } from '../../lib/server/auth';
+import { getCategories } from '../../lib/server/categories';
+import { getCatalog } from '../../lib/server/products';
+import { isLocal } from '../../lib/server/config';
+
+if (!await isAdmin(Astro)) return Astro.redirect('/admin/login');
+const [catalog, categories] = await Promise.all([getCatalog(Astro, true), getCategories(Astro)]);
+Astro.response.headers.set('Cache-Control', 'no-store');
+---
+<Layout title="Categorías — Villanueva" privatePage>
+  <Admin client:load products={[]} currency={catalog.currency} initialCategories={categories} demo={isLocal()} section="categories" />
+</Layout>

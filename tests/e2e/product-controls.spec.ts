@@ -19,7 +19,7 @@ async function layout(card: Locator) {
   });
 }
 
-for (const width of [360, 390, 768, 810, 1024, 1440]) {
+for (const width of [320, 360, 390, 768, 810, 1024, 1440]) {
   test(`Agregar y cantidad conservan su posición a ${width}px`, async ({
     page,
   }) => {
@@ -36,6 +36,11 @@ for (const width of [360, 390, 768, 810, 1024, 1440]) {
       await card.getByRole("button", { name: /^Agregar / }).click();
       await expect(card.locator(".quantity output")).toHaveText("1");
       expect.soft(await layout(card)).toEqual(before);
+      expect.soft(
+        await card.locator(".quantity").evaluate(
+          (element) => element.scrollWidth <= element.clientWidth,
+        ),
+      ).toBe(true);
 
       await card.getByRole("button", { name: /^Quitar una unidad/ }).click();
       await expect(card.locator(".add-button")).toBeVisible();

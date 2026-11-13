@@ -90,6 +90,10 @@ for (const width of [360, 390, 768, 1440]) {
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
     ).toBe(true);
+    const filters = page.getByRole("group", { name: "Filtrar por categoría" });
+    expect(
+      await filters.evaluate((element) => element.scrollWidth <= element.clientWidth),
+    ).toBe(true);
     await page.screenshot({
       path: `test-results/catalog-${width}.png`,
       fullPage: true,
@@ -105,6 +109,18 @@ test("API impide edición anónima y rechaza cantidades adulteradas", async ({
     multipart: { name: "No autorizado" },
   });
   expect(denied.status()).toBe(401);
+  const deniedCategory = await request.post("/api/admin/categories", {
+    headers: { Origin: "http://127.0.0.1:4321" },
+    form: { name: "Sin autorización" },
+  });
+  expect(deniedCategory.status()).toBe(401);
+  for (const resource of ["products", "categories"]) {
+    const deniedDelete = await request.delete(`/api/admin/${resource}`, {
+      headers: { Origin: "http://127.0.0.1:4321" },
+      form: { id: "paneles", expectedUpdatedAt: new Date().toISOString() },
+    });
+    expect(deniedDelete.status()).toBe(401);
+  }
   const badQuote = await request.post("/api/quote", {
     data: {
       items: [{ productId: "demo-led", quantity: -1 }],

@@ -3,9 +3,10 @@ import Layout from '../../layouts/Layout.astro';
 import Admin from '../../components/admin/Admin';
 import { isAdmin } from '../../lib/server/auth';
 import { getCatalog } from '../../lib/server/products';
+import { getCategories } from '../../lib/server/categories';
 import { isLocal } from '../../lib/server/config';
 if (!await isAdmin(Astro)) return Astro.redirect('/admin/login');
-const catalog = await getCatalog(Astro, true);
+const [catalog, categories] = await Promise.all([getCatalog(Astro, true), getCategories(Astro)]);
 Astro.response.headers.set('Cache-Control', 'no-store');
 ---
-<Layout title="Productos — Villanueva" privatePage><Admin client:load products={catalog.products} currency={catalog.currency} demo={isLocal()}/></Layout>
+<Layout title="Productos — Villanueva" privatePage><Admin client:load products={catalog.products} currency={catalog.currency} initialCategories={categories} demo={isLocal()}/></Layout>
