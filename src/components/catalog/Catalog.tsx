@@ -17,6 +17,8 @@ import {
 import WhatsAppIcon from "../WhatsAppIcon";
 import {
   formatMoney,
+  productImagePaths,
+  productImageUrl,
   readCart,
   setQuantity,
   type Product,
@@ -37,10 +39,34 @@ const normalize = (text: string) =>
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase();
-const photo = (product: Product) =>
-  product.imagePath?.startsWith("demo/")
-    ? `/${product.imagePath}`
-    : `/media/${product.id}.webp?v=${encodeURIComponent(product.updatedAt)}`;
+function ProductGallery({ product }: { product: Product }) {
+  const [active, setActive] = useState(0);
+  const paths = productImagePaths(product);
+  const index = Math.min(active, paths.length - 1);
+  const image = (
+    <img className="detail-photo" src={productImageUrl(product, index)} alt={product.name} />
+  );
+
+  if (paths.length === 1) return image;
+  return (
+    <div className="detail-gallery">
+      {image}
+      <div className="detail-thumbnails" role="group" aria-label="Fotos del producto">
+        {paths.map((path, position) => (
+          <button
+            type="button"
+            key={path}
+            aria-label={`Ver foto ${position + 1}`}
+            aria-pressed={position === index}
+            onClick={() => setActive(position)}
+          >
+            <img src={productImageUrl(product, position, true)} alt="" />
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function Catalog({
   initialProducts,
@@ -345,7 +371,7 @@ export default function Catalog({
                 >
                   {product.imagePath ? (
                     <img
-                      src={photo(product)}
+                      src={productImageUrl(product, 0, true)}
                       alt={product.name}
                       loading={index < 3 ? "eager" : "lazy"}
                       width="600"
@@ -486,7 +512,7 @@ export default function Catalog({
               return (
                 <div className="cart-line" key={line.productId}>
                   {product?.imagePath ? (
-                    <img src={photo(product)} alt="" width="76" height="76" />
+                    <img src={productImageUrl(product, 0, true)} alt="" width="76" height="76" />
                   ) : (
                     <span className="cart-line-placeholder" aria-hidden="true">
                       <Lightbulb size={24} />
@@ -617,13 +643,7 @@ export default function Catalog({
             >
               <X size={22} />
             </button>
-            {detail.imagePath && (
-              <img
-                className="detail-photo"
-                src={photo(detail)}
-                alt={detail.name}
-              />
-            )}
+            {detail.imagePath && <ProductGallery key={detail.id} product={detail} />}
             <div className="detail-content">
               <h2 id="detail-title">{detail.name}</h2>
               <strong className="detail-price">

@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { readFile } from "node:fs/promises";
 
 test("el administrador crea categorías y la tienda muestra filas adicionales", async ({
   page,
@@ -154,4 +155,72 @@ test("administrador publica, edita y oculta un producto con foto", async ({
   await expect(page.getByRole("link", { name: /Lámpara de prueba/ })).toHaveCount(0);
   await page.getByRole("button", { name: "Cerrar sesión" }).click();
   await expect(page).toHaveURL(/admin\/login/);
+});
+
+test("las tres fotos se publican en el orden elegido y se pueden retirar", async ({ page, request }) => {
+  const password = process.env.TEST_ADMIN_PASSWORD;
+  test.skip(!password, "Configura TEST_ADMIN_PASSWORD para verificar el editor.");
+  await page.goto("/admin");
+  await page.getByLabel("Contraseña", { exact: true }).fill(password!);
+  await page.getByRole("button", { name: "Entrar al panel" }).click();
+  await page.getByRole("link", { name: "Nuevo producto" }).click();
+  await page.getByLabel("Nombre", { exact: true }).fill("Producto con galería");
+  await page.getByLabel("Precio en USD", { exact: true }).fill("25");
+  const files = await Promise.all(["lamp.jpg", "solar.jpg", "led.jpg"].map(async (name) => ({
+    name,
+    mimeType: "image/jpeg",
+    // Keep valid JPEGs while exercising a batch larger than the Vercel request limit.
+    buffer: Buffer.concat([await readFile(`public/demo/${name}`), Buffer.alloc(1_550_000)]),
+  })));
+  const upload = page.getByLabel("Subir foto del producto");
+  await upload.setInputFiles(files);
+  await expect(page.getByRole("button", { name: "Quitar foto 3" })).toBeVisible();
+  await expect(upload).toBeDisabled();
+  const save = async () => {
+    const response = page.waitForResponse((response) =>
+      response.url().endsWith("/api/admin/products") && response.request().method() === "POST",
+    );
+    await page.getByRole("button", { name: "Guardar producto" }).click();
+    const result = await response;
+    expect(result.status(), await result.text()).toBe(200);
+    await expect(page.getByText("Producto guardado.")).toBeVisible();
+  };
+  await page.getByLabel("Mostrar en el catálogo").check();
+  await save();
+  const editUrl = page.url();
+  const id = editUrl.split("/").at(-1);
+  const media = (position: number) => request.get(`/media/${id}.webp?photo=${position}`);
+  const original = await Promise.all([1, 2, 3].map(async (position) => {
+    const photo = await media(position);
+    expect(photo.status()).toBe(200);
+    return photo.body();
+  }));
+  expect(original[0].equals(original[2])).toBe(false);
+
+  await page.reload();
+  await page.getByRole("button", { name: "Adelantar foto 3" }).click();
+  await page.getByRole("button", { name: "Adelantar foto 2" }).click();
+  await save();
+  expect((await (await media(1)).body()).equals(original[2])).toBe(true);
+  expect((await (await media(2)).body()).equals(original[0])).toBe(true);
+  expect((await (await media(3)).body()).equals(original[1])).toBe(true);
+
+  await page.goto(`/productos/${id}`);
+  const detail = page.getByRole("dialog", { name: "Producto con galería" });
+  await expect(detail.getByRole("button", { name: "Ver foto 1" })).toHaveAttribute("aria-pressed", "true");
+  await detail.getByRole("button", { name: "Ver foto 2" }).click();
+  await expect(detail.locator(".detail-photo")).toHaveAttribute("src", /[?&]photo=2/);
+
+  await page.goto(editUrl);
+  await page.getByRole("button", { name: "Quitar foto 2" }).click();
+  await save();
+  expect((await media(3)).status()).toBe(404);
+  expect((await (await media(2)).body()).equals(original[1])).toBe(true);
+  await page.getByLabel("Mostrar en el catálogo").uncheck();
+  await save();
+  expect((await media(2)).status()).toBe(404);
+
+  page.once("dialog", (dialog) => dialog.accept());
+  await page.getByRole("button", { name: "Eliminar producto", exact: true }).click();
+  await expect(page).toHaveURL(/\/admin$/);
 });

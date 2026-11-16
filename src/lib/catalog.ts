@@ -26,9 +26,27 @@ export interface Product {
   specifications: { label: string; value: string }[];
   priceMinor: number | null;
   imagePath: string | null;
+  additionalImagePaths?: string[];
   published: boolean;
   available: boolean;
   updatedAt: string;
+}
+
+export const maxProductPhotos = 3;
+export const maxPhotoBytes = 8 * 1024 * 1024;
+export const photoTypes = ["image/jpeg", "image/png", "image/webp"];
+
+export function productImagePaths(product: Pick<Product, "imagePath" | "additionalImagePaths">) {
+  return product.imagePath ? [product.imagePath, ...(product.additionalImagePaths ?? [])] : [];
+}
+
+export function productImageUrl(product: Product, index = 0, thumbnail = false) {
+  const path = productImagePaths(product)[index];
+  if (path?.startsWith("demo/")) return `/${path}`;
+  const version = encodeURIComponent(product.updatedAt);
+  const position = index ? `&photo=${index + 1}` : "";
+  const size = thumbnail && path?.startsWith("cloudinary:") ? "&size=thumb" : "";
+  return `/media/${product.id}.webp?v=${version}${position}${size}`;
 }
 export interface CartItem {
   productId: string;

@@ -1,5 +1,5 @@
 import type { APIContext } from "astro";
-import type { Product } from "../catalog";
+import { productImagePaths, type Product } from "../catalog";
 import { isLocal, assertLocalRequest } from "./config";
 import { localDb } from "./local";
 import { supabase } from "./supabase";
@@ -43,6 +43,7 @@ export async function getCatalog(
       specifications: row.specifications,
       priceMinor: row.price_minor,
       imagePath: row.image_path,
+      additionalImagePaths: row.additional_image_paths ?? [],
       published: row.published,
       available: row.available,
       updatedAt: row.updated_at,
@@ -87,6 +88,7 @@ export async function saveProduct(
     specifications: product.specifications,
     price_minor: product.priceMinor,
     image_path: product.imagePath,
+    additional_image_paths: product.additionalImagePaths ?? [],
     published: product.published,
     available: product.available,
     updated_at: product.updatedAt,
@@ -114,9 +116,9 @@ export async function deleteProduct(context: APIContext, id: string, expectedVer
     const db = localDb();
     const removed = db.prepare(
       `DELETE FROM products WHERE id = ? AND json_extract(data, '$.updatedAt') = ?
-       RETURNING json_extract(data, '$.imagePath') AS image_path`,
+       RETURNING data`,
     ).get(id, expectedVersion);
-    return removed ? { imagePath: removed.image_path as string | null } : null;
+    return removed ? productImagePaths(JSON.parse(String(removed.data))) : null;
   }
 
   const { data, error } = await supabase(context)
@@ -124,8 +126,11 @@ export async function deleteProduct(context: APIContext, id: string, expectedVer
     .delete()
     .eq("id", id)
     .eq("updated_at", expectedVersion)
-    .select("image_path")
+    .select("image_path, additional_image_paths")
     .maybeSingle();
   if (error) throw new Error("No se pudo eliminar el producto.");
-  return data ? { imagePath: data.image_path as string | null } : null;
+  return data ? productImagePaths({
+    imagePath: data.image_path,
+    additionalImagePaths: data.additional_image_paths,
+  }) : null;
 }

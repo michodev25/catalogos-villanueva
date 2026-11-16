@@ -26,7 +26,7 @@ Las fichas iniciales, los precios y las imágenes son ejemplos señalizados. Cad
 - Agregar y ajustar cantidades con **+ 1 −**. Persistencia del carrito en el navegador.
 - Acción única **Cotizar**. El servidor comprueba de nuevo precios y disponibilidad antes de generar el mensaje. El cliente pulsa Enviar dentro de WhatsApp.
 - Panel con cuenta única, campos editables, características, foto, disponibilidad y borradores.
-- Imágenes JPG, PNG o WebP hasta 8 MB. El servidor comprueba el formato, limita dimensiones, elimina metadatos y convierte a WebP.
+- Hasta tres imágenes JPG, PNG o WebP de 8 MB cada una. La primera es la portada y las demás se ven en la ficha. El servidor comprueba el formato, limita dimensiones, elimina metadatos y convierte a WebP.
 - Guardado con control de versión. Una edición antigua avisa del conflicto con otra pestaña.
 
 ## Conectar Supabase
@@ -40,6 +40,15 @@ Las fichas iniciales, los precios y las imágenes son ejemplos señalizados. Cad
 El servidor usa la sesión de Supabase y sus políticas RLS. El UUID del propietario es la única identidad con permiso de escritura. Los visitantes solo pueden consultar productos publicados y las imágenes asociadas. Las cuentas de otras personas carecen de permiso administrativo aunque consigan autenticarse.
 
 La integración está preparada. Las pruebas contra un proyecto real requieren configurar sus credenciales. Los datos locales de demostración permanecen separados del catálogo de Supabase.
+
+## Guardar fotos nuevas en Cloudinary
+
+1. Aplica las migraciones de Supabase pendientes, incluida `202611160001_product_photos.sql`.
+2. En **Cloudinary → Settings → API Keys**, copia la URL de conexión con formato `cloudinary://<api_key>:<api_secret>@<cloud_name>`.
+3. En **Vercel → Settings → Environment Variables**, guarda esa URL como `CLOUDINARY_URL` para **Production**. Después, vuelve a desplegar.
+4. Sube una foto de prueba desde el panel y comprueba que aparece en la ficha pública y como recurso autenticado en Cloudinary.
+
+Las fotos nuevas en producción se guardan en Cloudinary y sus miniaturas se sirven a un máximo de 480 px. Las fotos anteriores se siguen leyendo desde Supabase. La aplicación comprueba la visibilidad del producto antes de entregar la imagen. Guarda `CLOUDINARY_URL` en Vercel o en un archivo `.env` privado.
 
 ## Compilar y ejecutar en un alojamiento Node
 

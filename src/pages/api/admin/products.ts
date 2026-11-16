@@ -1,13 +1,39 @@
 import type { APIRoute } from "astro";
 import { z } from "zod";
-import { parsePrice, type Product } from "../../../lib/catalog";
+import { maxProductPhotos, parsePrice, productImagePaths, type Product } from "../../../lib/catalog";
 import { requireAdmin } from "../../../lib/server/auth";
 import { deleteProduct, getCatalog, saveProduct } from "../../../lib/server/products";
-import { uploadImage, removeImage } from "../../../lib/server/images";
+import { uploadImage, removeImages } from "../../../lib/server/images";
 import { limitedForm } from "../../../lib/server/request";
 import { getCategories } from "../../../lib/server/categories";
 
 const productId = z.string().regex(/^[a-zA-Z0-9-]{1,100}$/);
+const photoOrder = z.array(z.string().max(100).nullable()).max(maxProductPhotos);
+
+function productPhotos(form: FormData, currentPaths: string[]) {
+  const requested = form.get("photoOrder");
+  if (requested === null) {
+    const file = form.get("image");
+    if (file instanceof File && file.size)
+      return { order: [null, ...currentPaths.slice(1)], files: [file] };
+    return { order: currentPaths, files: [] };
+  }
+
+  const files = form.getAll("photos");
+  try {
+    const order = photoOrder.parse(JSON.parse(String(requested)));
+    const keep = order.filter((path) => path !== null);
+    if (
+      files.every((file): file is File => file instanceof File && file.size > 0) &&
+      files.length === order.length - keep.length &&
+      new Set(keep).size === keep.length &&
+      keep.every((path) => currentPaths.includes(path))
+    ) return { order, files };
+  } catch {
+    // A malformed order gets the same message as invalid file positions.
+  }
+  throw new Error("Revisa las fotos. Puedes guardar hasta tres por producto.");
+}
 
 export const DELETE: APIRoute = async (context) => {
   try {
@@ -28,7 +54,7 @@ export const DELETE: APIRoute = async (context) => {
         { error: "Este producto cambió o ya fue eliminado. Recarga para revisar." },
         { status: 409 },
       );
-    if (removed.imagePath) await removeImage(context, removed.imagePath).catch(() => {});
+    await removeImages(context, removed).catch(() => {});
     return new Response(null, { status: 204, headers: { "Cache-Control": "no-store" } });
   } catch {
     return Response.json(
@@ -47,7 +73,7 @@ export const POST: APIRoute = async (context) => {
       { status: 401 },
     );
   }
-  let uploaded: string | null = null;
+  const uploaded: string[] = [];
   let saveStarted = false;
   try {
     const form = await limitedForm(context.request);
@@ -70,6 +96,8 @@ export const POST: APIRoute = async (context) => {
         "Este producto cambió en otra pestaña. Recarga para revisar la última versión.",
       );
     const priceText = String(form.get("price") || "").trim();
+    const currentPaths = current ? productImagePaths(current) : [];
+    const { order, files } = productPhotos(form, currentPaths);
     const product: Product = {
       id,
       name: z
@@ -93,29 +121,33 @@ export const POST: APIRoute = async (context) => {
         .max(20)
         .parse(JSON.parse(String(form.get("specifications") || "[]"))),
       priceMinor: priceText ? parsePrice(priceText) : null,
-      imagePath: current?.imagePath || null,
+      imagePath: null,
       published: form.get("published") === "true",
       available: form.get("available") === "true",
       updatedAt: new Date().toISOString(),
     };
-    const file = form.get("image");
-    if (file instanceof File && file.size) {
-      uploaded = await uploadImage(context, file);
-      product.imagePath = uploaded;
-    }
     if (
       product.published &&
-      (!product.name || !product.imagePath || !product.priceMinor)
+      (!product.name || !order.length || !product.priceMinor)
     )
       throw new Error(
         "Para publicar, añade nombre, foto y un precio mayor que cero.",
       );
+    const paths: string[] = [];
+    for (const path of order) {
+      if (path !== null) {
+        paths.push(path);
+      } else {
+        const stored = await uploadImage(context, files[uploaded.length]);
+        uploaded.push(stored);
+        paths.push(stored);
+      }
+    }
+    product.imagePath = paths[0] ?? null;
+    product.additionalImagePaths = paths.slice(1);
     saveStarted = true;
     const savedProduct = await saveProduct(context, product, expected);
-    const oldImage = current?.imagePath;
-    uploaded = null;
-    if (oldImage && oldImage !== product.imagePath)
-      await removeImage(context, oldImage).catch(() => {});
+    await removeImages(context, currentPaths.filter((path) => !paths.includes(path))).catch(() => {});
     return Response.json(
       { product: savedProduct },
       { headers: { "Cache-Control": "no-store" } },
@@ -123,8 +155,7 @@ export const POST: APIRoute = async (context) => {
   } catch (error) {
     // A failed response does not prove the write failed. Retain the new image
     // after starting a save so a committed product never loses its photo.
-    if (uploaded && !saveStarted)
-      await removeImage(context, uploaded).catch(() => {});
+    if (!saveStarted) await removeImages(context, uploaded).catch(() => {});
     return Response.json(
       {
         error:

@@ -844,6 +844,43 @@ textarea::placeholder {
   min-height: 440px;
   object-fit: cover;
 }
+.detail-gallery {
+  min-width: 0;
+  background: #f0f3e9;
+}
+.detail-gallery .detail-photo {
+  display: block;
+  height: auto;
+  min-height: 0;
+  aspect-ratio: 1;
+  object-fit: contain;
+}
+.detail-thumbnails {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px;
+}
+.detail-thumbnails button {
+  width: 54px;
+  height: 54px;
+  padding: 2px;
+  border: 2px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  cursor: pointer;
+}
+.detail-thumbnails button:hover,
+.detail-thumbnails button[aria-pressed="true"] {
+  border-color: var(--ink);
+}
+.detail-thumbnails img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 4px;
+}
 .detail-content {
   min-width: 0;
   overflow-wrap: anywhere;
@@ -1321,17 +1358,48 @@ textarea {
 .spec-row .icon-button {
   width: 32px;
 }
-.photo-preview {
-  background: #f0f3e9;
-  border-radius: 8px;
-  overflow: hidden;
-  aspect-ratio: 1.2;
-  margin-bottom: 16px;
+.admin-photo-list {
+  display: grid;
+  gap: 2px;
+  list-style: none;
+  padding: 0;
+  margin: 12px 0 16px;
 }
-.photo-preview img {
+.admin-photo-list li {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  min-height: 58px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+  font-weight: 700;
+}
+.admin-photo-thumb {
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 6px;
+  background: #f0f3e9;
+}
+.admin-photo-thumb img {
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+.admin-photo-actions {
+  display: flex;
+  gap: 2px;
+}
+.admin-photo-actions .icon-button {
+  width: 34px;
+  height: 44px;
+}
+.admin-photo-actions .icon-button:disabled {
+  opacity: 0.35;
+  cursor: default;
+  background: transparent;
 }
 .upload-label {
   position: relative;
@@ -1356,6 +1424,14 @@ textarea {
 .upload-label:focus-within {
   outline: 3px solid var(--focus);
   outline-offset: 3px;
+}
+.upload-label:has(input:disabled) {
+  color: var(--muted);
+  background: #f0f3e9;
+  cursor: default;
+}
+.upload-label input:disabled {
+  pointer-events: none;
 }
 .form-section .field-hint:last-child {
   margin: 12px 0 0;
@@ -1729,6 +1805,10 @@ textarea {
     min-height: 0;
     height: 220px;
   }
+  .detail-gallery .detail-photo {
+    height: min(65vw, 320px);
+    aspect-ratio: auto;
+  }
   .detail-content {
     padding: 25px;
   }
@@ -1829,8 +1909,8 @@ textarea {
   .form-save > .primary {
     flex: 1;
   }
-  .photo-preview {
-    aspect-ratio: 1.55;
+  .admin-photo-actions .icon-button {
+    width: 40px;
   }
   input:not([type="checkbox"]):not([type="file"]),
   select,

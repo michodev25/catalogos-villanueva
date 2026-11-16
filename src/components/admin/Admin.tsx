@@ -12,12 +12,9 @@ import {
   Tags,
   Trash2,
 } from "lucide-react";
-import { formatMoney, sortCategories, type Category, type Product } from "../../lib/catalog";
+import { formatMoney, productImageUrl, sortCategories, type Category, type Product } from "../../lib/catalog";
+import ProductPhotos, { appendPhotoUploads, savedPhotos, type PhotoDraft } from "./ProductPhotos";
 
-const imageUrl = (product: Product) =>
-  product.imagePath?.startsWith("demo/")
-    ? `/${product.imagePath}`
-    : `/media/${product.id}.webp?v=${encodeURIComponent(product.updatedAt)}`;
 export default function Admin({
   products,
   currency,
@@ -52,8 +49,7 @@ export default function Admin({
   const [price, setPrice] = useState(
     existing?.priceMinor == null ? "" : (existing.priceMinor / 100).toFixed(2),
   );
-  const [file, setFile] = useState<File | null>(null);
-  const [preview, setPreview] = useState("");
+  const [photos, setPhotos] = useState<PhotoDraft[]>(() => savedPhotos(product));
   const [busy, setBusy] = useState(false);
   const [deletingProduct, setDeletingProduct] = useState(false);
   const [message, setMessage] = useState("");
@@ -71,15 +67,6 @@ export default function Admin({
     if (!product.id)
       setProduct((current) => ({ ...current, id: crypto.randomUUID() }));
   }, []);
-  useEffect(() => {
-    if (!file) {
-      setPreview("");
-      return;
-    }
-    const url = URL.createObjectURL(file);
-    setPreview(url);
-    return () => URL.revokeObjectURL(url);
-  }, [file]);
   const update = <K extends keyof Product>(key: K, value: Product[K]) => {
     setProduct((current) => ({ ...current, [key]: value }));
     setMessage("");
@@ -103,8 +90,8 @@ export default function Admin({
       expectedUpdatedAt: product.updatedAt,
     }))
       form.set(key, value);
-    if (file) form.set("image", file);
     try {
+      await appendPhotoUploads(form, photos);
       const response = await fetch("/api/admin/products", {
         method: "POST",
         body: form,
@@ -113,7 +100,7 @@ export default function Admin({
       if (response.status === 401) setNeedsLogin(true);
       if (!response.ok) throw new Error(result.error || "No se pudo guardar.");
       setProduct(result.product);
-      setFile(null);
+      setPhotos(savedPhotos(result.product));
       setSuccess(true);
       setMessage("Producto guardado.");
       history.replaceState(null, "", `/admin/productos/${result.product.id}`);
@@ -393,7 +380,7 @@ export default function Admin({
                     <div className="admin-product-identity">
                       {item.imagePath ? (
                         <img
-                          src={imageUrl(item)}
+                          src={productImageUrl(item, 0, true)}
                           alt=""
                           width="64"
                           height="64"
@@ -601,41 +588,16 @@ export default function Admin({
                   </section>
                 </div>
                 <aside className="form-aside">
-                  <section className="form-section">
-                    <h2>Foto principal</h2>
-                    <div className="photo-preview">
-                      {preview || product.imagePath ? (
-                        <img
-                          src={preview || imageUrl(product)}
-                          alt="Vista previa de la foto del producto"
-                        />
-                      ) : (
-                        <div className="image-empty">
-                          <ImagePlus size={36} />
-                          <span>Tu producto, en primer plano</span>
-                        </div>
-                      )}
-                    </div>
-                    <label className="upload-label">
-                      <ImagePlus size={18} />{" "}
-                      {product.imagePath || file
-                        ? "Cambiar foto"
-                        : "Subir foto"}
-                      <input
-                        type="file"
-                        accept="image/jpeg,image/png,image/webp"
-                        aria-label="Subir foto del producto"
-                        onChange={(event) => {
-                          const selected = event.target.files?.[0];
-                          if (selected && selected.size > 8 * 1024 * 1024) {
-                            setMessage("La foto debe pesar menos de 8 MB.");
-                            event.target.value = "";
-                          } else setFile(selected || null);
-                        }}
-                      />
-                    </label>
-                    <p className="field-hint">JPG, PNG o WebP. Hasta 8 MB.</p>
-                  </section>
+                  <ProductPhotos product={product} photos={photos} disabled={busy || deletingProduct}
+                    onChange={(next) => {
+                      setPhotos(next);
+                      setMessage("");
+                    }}
+                    onError={(error) => {
+                      setSuccess(false);
+                      setMessage(error);
+                    }}
+                  />
                   <section className="form-section">
                     <h2>Visibilidad</h2>
                     <label className="checkbox-label">
