@@ -258,7 +258,7 @@ export default function Catalog({
       <div className="site-top">
         <header className="site-header shell">
           <a className="brand" href="/" aria-label="Villanueva, inicio">
-            <img src="/villanueva-logo.png" alt="" width="44" height="44" />
+            <img src="/villanueva-logo-v2.png" alt="" width="44" height="44" />
             <span>Villanueva</span>
           </a>
           <form

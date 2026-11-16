@@ -21,7 +21,8 @@ export const GET: APIRoute = async (context) => {
       const connectionUrl = env("CLOUDINARY_URL");
       if (!connectionUrl) return new Response(null, { status: 404 });
       const thumbnail = context.url.searchParams.get("size") === "thumb";
-      const response = await fetch(cloudinaryDeliveryUrl(connectionUrl, publicId, thumbnail), {
+      const deliveryUrl = await cloudinaryDeliveryUrl(connectionUrl, publicId, thumbnail);
+      const response = await fetch(deliveryUrl, {
         signal: AbortSignal.timeout(10_000),
       });
       if (!response.ok || !response.body) return new Response(null, { status: 404 });

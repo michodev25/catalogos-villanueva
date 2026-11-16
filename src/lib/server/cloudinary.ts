@@ -1,11 +1,14 @@
-import { v2 as cloudinary } from "cloudinary";
-
 const thumbnailTransform = { crop: "limit", width: 480, quality: "auto:good" };
 
 function cloudinaryConfig(connectionUrl: string) {
   try {
     const url = new URL(connectionUrl);
-    if (url.protocol === "cloudinary:" && url.username && url.password && /^[a-z0-9_-]+$/i.test(url.hostname)) {
+    if (
+      /^cloudinary:\/\//i.test(connectionUrl) &&
+      url.username &&
+      url.password &&
+      /^[a-z0-9_-]+$/i.test(url.hostname)
+    ) {
       return {
         cloud_name: url.hostname,
         api_key: decodeURIComponent(url.username),
@@ -23,9 +26,12 @@ export function cloudinaryPublicId(path: string) {
   return id ? `villanueva/${id}` : null;
 }
 
-export function cloudinaryDeliveryUrl(connectionUrl: string, publicId: string, thumbnail: boolean) {
+export async function cloudinaryDeliveryUrl(connectionUrl: string, publicId: string, thumbnail: boolean) {
+  const config = cloudinaryConfig(connectionUrl);
+  // The SDK reads CLOUDINARY_URL when it loads. Load it only after validation.
+  const { v2: cloudinary } = await import("cloudinary");
   return cloudinary.url(publicId, {
-    ...cloudinaryConfig(connectionUrl),
+    ...config,
     secure: true,
     type: "authenticated",
     sign_url: true,
@@ -44,6 +50,7 @@ export async function uploadCloudinaryPhoto(connectionUrl: string, id: string, b
     overwrite: false,
     eager: [{ ...thumbnailTransform, format: "webp" }],
   };
+  const { v2: cloudinary } = await import("cloudinary");
   return new Promise<string>((resolve, reject) => {
     const fail = () => reject(new Error("No se pudo subir la foto a Cloudinary. Inténtalo de nuevo."));
     const stream = cloudinary.uploader.upload_stream(options, (error, result) => {
@@ -55,8 +62,10 @@ export async function uploadCloudinaryPhoto(connectionUrl: string, id: string, b
 }
 
 export async function removeCloudinaryPhoto(connectionUrl: string, publicId: string) {
+  const config = cloudinaryConfig(connectionUrl);
+  const { v2: cloudinary } = await import("cloudinary");
   await cloudinary.uploader.destroy(publicId, {
-    ...cloudinaryConfig(connectionUrl),
+    ...config,
     resource_type: "image",
     type: "authenticated",
     invalidate: true,

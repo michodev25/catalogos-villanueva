@@ -216,7 +216,7 @@ export default function Admin({
     <div className="admin-app" inert={!ready} aria-busy={!ready}>
       <aside className="admin-sidebar">
         <a className="brand" href="/">
-          <img src="/villanueva-logo.png" alt="" width="40" height="40" />
+          <img src="/villanueva-logo-v2.png" alt="" width="40" height="40" />
           <span>Villanueva</span>
         </a>
         <span className="admin-label">Tu catálogo</span>
